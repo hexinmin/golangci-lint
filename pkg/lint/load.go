@@ -148,39 +148,17 @@ func (cl ContextLoader) buildSSAProgram(pkgs []*packages.Package) *ssa.Program {
 }
 
 func (cl ContextLoader) findLoadMode(linters []*linter.Config) packages.LoadMode {
-	maxLoadMode := packages.LoadFiles
+	loadMode := packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles
 	for _, lc := range linters {
-		curLoadMode := packages.LoadFiles
 		if lc.NeedsTypeInfo {
-			curLoadMode = packages.LoadSyntax
+			loadMode |= packages.NeedImports | packages.NeedDeps | packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo
 		}
 		if lc.NeedsSSARepr {
-			curLoadMode = packages.LoadAllSyntax
-		}
-		if curLoadMode > maxLoadMode {
-			maxLoadMode = curLoadMode
+			//curLoadMode = packages.LoadAllSyntax
 		}
 	}
 
-	return maxLoadMode
-}
-
-func stringifyLoadMode(mode packages.LoadMode) string {
-	switch mode {
-	case packages.LoadFiles:
-		return "load files"
-	case packages.LoadImports:
-		return "load imports"
-	case packages.LoadTypes:
-		return "load types"
-	case packages.LoadSyntax:
-		return "load types and syntax"
-	}
-	// it may be an alias, and may be not
-	if mode == packages.LoadAllSyntax {
-		return "load deps types and syntax"
-	}
-	return "unknown"
+	return loadMode
 }
 
 func (cl ContextLoader) buildArgs() []string {
@@ -229,6 +207,30 @@ func (cl ContextLoader) makeBuildFlags() ([]string, error) {
 	}
 
 	return buildFlags, nil
+}
+
+func stringifyLoadMode(mode packages.LoadMode) string {
+	m := map[packages.LoadMode]string{
+		packages.NeedCompiledGoFiles: "compiled_files",
+		packages.NeedDeps:            "deps",
+		packages.NeedExportsFile:     "exports_file",
+		packages.NeedFiles:           "files",
+		packages.NeedImports:         "imports",
+		packages.NeedName:            "name",
+		packages.NeedSyntax:          "syntax",
+		packages.NeedTypes:           "types",
+		packages.NeedTypesInfo:       "types_info",
+		packages.NeedTypesSizes:      "types_sizes",
+	}
+
+	var flags []string
+	for flag, flagStr := range m {
+		if mode&flag != 0 {
+			flags = append(flags, flagStr)
+		}
+	}
+
+	return fmt.Sprintf("%d (%s)", mode, strings.Join(flags, "|"))
 }
 
 func (cl ContextLoader) loadPackages(ctx context.Context, loadMode packages.LoadMode) ([]*packages.Package, error) {
