@@ -131,6 +131,13 @@ func (m Manager) GetAllSupportedLinterConfigs() []*linter.Config {
 			WithSpeed(8).
 			WithURL("https://github.com/securego/gosec").
 			WithAlternativeNames("gas"),
+
+		linter.NewConfig(golinters.SqlInject{}).
+			WithTypeInfo().
+			WithPresets(linter.PresetBugs).
+			WithSpeed(8).
+			//WithURL("https://github.com/securego/gosec").
+			WithAlternativeNames("sqlinj"),
 		linter.NewConfig(golinters.Structcheck{}).
 			WithTypeInfo().
 			WithPresets(linter.PresetUnused).
